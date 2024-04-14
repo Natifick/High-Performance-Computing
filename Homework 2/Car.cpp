@@ -7,6 +7,7 @@
 
 #define RGB_COMPONENT_COLOR 255
 
+
 int N_THREADS = 12;
 
 struct PPMPixel {

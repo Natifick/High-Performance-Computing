@@ -7,6 +7,7 @@
 #include <random>
 #include <cstdlib>
 
+
 #pragma omp declare reduction(vsum : std::vector<double> : std::transform(omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), std::plus<double>())) initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
  
 void init_random(std::vector<double> &arr, std::uniform_real_distribution<double>& range, std::mt19937 gen) {
