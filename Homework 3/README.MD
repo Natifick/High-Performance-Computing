@@ -1,6 +1,6 @@
 # Tasks
 
-1) Ping-Pong:  
+## Ping-Pong:  
 
 1. Let's imagine that processes are human beings and they wanted to play ping-pong to get acquainted with each other. Processor 0 starts the play. It randomly passes a ball to 'i' and says its name.
 
@@ -12,7 +12,7 @@ Processor 'i' passes a ball to another guy 'j' saying all previous names in the 
 
 - Plot a graph of time against message size to determine the latency (i.e. the time taken for a message of zero length); plot a graph of the bandwidth to see how it varies with message size. (3 points)
 
-2) Cellular Automata 1-d:
+## Cellular Automata 1-d:
 
 First: you initialize the one-dimensional array with ones and zeros (either randomly or not)
 
@@ -35,5 +35,5 @@ Draw the pictures of 3 interesting rule outputs (3 points)
 # How to run
 You can run every script in this folder with
 ```
-sOmE sHeLl cOmMaNd
+mpic++ <file name>.cpp -o test && mpirun -n 12 ./test
 ```
