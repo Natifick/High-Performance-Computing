@@ -4,7 +4,6 @@
 #include <random> // for std::mt19937
 
 static const size_t N = 100;
-static const size_t VEC_SIZE = 1000000;
 
 void pretty_print(size_t N, int* array){
     for(size_t i = 0; i < N; ++i){
@@ -14,8 +13,8 @@ void pretty_print(size_t N, int* array){
 }
 
 
-int main(int argc, char** argv) {
-
+int main(int argc, char* argv[]) {
+    
     int prank;
     int psize;
     MPI_Status status;
@@ -24,6 +23,11 @@ int main(int argc, char** argv) {
 
     MPI_Comm_size(MPI_COMM_WORLD, &psize);
     MPI_Comm_rank(MPI_COMM_WORLD, &prank);
+    
+    long unsigned int VEC_SIZE = atoi(argv[1]); // Get the message size
+    if (prank == 0) {
+        printf("%ld\n", VEC_SIZE*N*sizeof(int));
+    }
 
     std::mt19937 mt (42 * prank);
     std::uniform_int_distribution<int> dis(0, psize-2);
@@ -62,7 +66,7 @@ int main(int argc, char** argv) {
             MPI_Ssend(&current_iteration, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
         }
         t2 = MPI_Wtime();
-        std::cout << "Done in " << t2 - t1 << std::endl;
+        std::cout << t2 - t1 << std::endl;
     }
     MPI_Finalize();
     

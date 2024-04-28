@@ -56,6 +56,7 @@ int main(int argc, char *argv[]) {
     double t1, t2;
     t1 = MPI_Wtime();
     // Init for this particular process
+    // I believe it's better than distributing single array to all processes
     int subsize;
     if (N % psize == 0) {
         subsize = N / psize;
@@ -83,18 +84,22 @@ int main(int argc, char *argv[]) {
         make_move(subgrid, permutation_table);
         MPI_Sendrecv(subgrid.data(), 1, MPI_INT, 
                      prank!=0?prank-1:psize-1, 1,
-                     subgrid.data()+subsize-1, 1, MPI_INT,
+                     subgrid.data()+subsize+1, 1, MPI_INT,
                      prank!=psize-1?prank+1:0, 1,
                      MPI_COMM_WORLD, &status);
-        MPI_Sendrecv(subgrid.data()+subsize-1, 1, MPI_INT,
+        MPI_Sendrecv(subgrid.data()+subsize+1, 1, MPI_INT,
                      prank!=psize-1?prank+1:0, 2,
                      subgrid.data(), 1, MPI_INT,
                      prank!=0?prank-1:psize-1, 2,
                      MPI_COMM_WORLD, &status);
     }
+    // Time to aggregate back
+    int *full_field = (int*)malloc(sizeof(int)*N);
+    MPI_Gather(subgrid.data(), subsize, MPI_INT, 
+               full_field, subsize, MPI_INT, 0, MPI_COMM_WORLD);
     t2 = MPI_Wtime();
     if (prank == 0) {
-        printf("Time = %f\n", t2 - t1);
+        printf("%f\n", t2 - t1);
     }
 
     MPI_Finalize();
