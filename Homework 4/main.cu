@@ -1,68 +1,92 @@
+
+
+#include <stdio.h>
 #include <array>
 #include <iostream>
-#include <stdio.h>
-
 
 #include "utils.cuh"
 
-static const size_t N = 1<<8;
+static const size_t N = 1024;
 
-// GPU code
-
-__global__ void initArrayKernel(float* array, int size) {
-    int gid = getGid();
-    if (gid < size) {
-        array[gid] = gid;
+#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true) {
+    if (code != cudaSuccess) {
+        fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
+        if (abort) exit(code);
     }
 }
 
-__global__ void zeroKernel(float* array, int size) {
-    int gid = getGid();
-    if (gid < size) {
-        array[gid] = 0;
+__global__ void reduceKernel(float* a, size_t N) {
+    size_t gid = getGid();
+    size_t s = N / 2;
+    float dummy;
+
+    while (s > 0) {
+        if (gid < s) {
+            a[gid] = a[gid] + a[gid + s];
+        }
+        s = s / 2;
+        __syncthreads();
     }
+
+    // a[0] contains the result
 }
 
-__global__ void squareKernel(float* inArray, float* outArray, int size) {
-    int gid = getGid();
-    if (gid < size) {
-        outArray[gid] = inArray[gid] * inArray[gid];
+__global__ void reduceKernel_shared(float* a, size_t N) {
+    size_t gid = getGid();
+    size_t s = N / 2;
+    float dummy;
+    __shared__ float shmem[1024];
+
+    shmem[gid] = a[gid];
+
+
+    while (s > 0) {
+        __syncthreads();
+        if (gid < s) {
+            shmem[gid] = shmem[gid] + shmem[gid + s];
+        }
+        s = s / 2;
     }
+
+    if  (gid==0) {
+        a[gid] = shmem[gid];
+    }
+    // a[0] contains the result
 }
 
-__global__ void adderKernel(float* array, int size) {
-    int gid = getGid();
-    if (gid < size) {
-        //array[0] = array[0] + 1;
-        atomicAdd(&array[0], 1);
-    }
-}
-
-// CPU code
 int main() {
-
-    std::array<float, N> h_array;
-
-    float* d_inArray;
-    cudaMalloc(&d_inArray, N * sizeof(float));
-
-    float* d_outArray;
-    cudaMalloc(&d_outArray, N * sizeof(float));
-
-    initArrayKernel<<<1024, 1024>>>(d_inArray, N);
-    zeroKernel<<<1024, 1024>>>(d_outArray, N);
-    //squareKernel<<<1, N>>>(d_inArray, d_outArray, N);
-    adderKernel<<<1024, 1024>>>(d_outArray, N);
-
-    cudaMemcpy(&h_array[0], d_outArray, N * sizeof(float), cudaMemcpyDeviceToHost);
-
+    float* h_a = (float*)malloc(N*sizeof(float));
     for(auto n = 0; n < N; ++n) {
-        std::cout << h_array[n] << "\t";
+        h_a[n] = n;
     }
-    std::cout << std::endl;
 
-    std::cout << "Done from CPU\n";
-    cudaFree(d_inArray);
-    cudaFree(d_outArray);
+    cudaEvent_t start, end;
+    cudaEventCreate(&start);
+    cudaEventCreate(&end);
+
+    float* d_a;
+    gpuErrchk(cudaMalloc(&d_a, (N-3) * sizeof(float)));
+
+    gpuErrchk(cudaMemcpy(d_a, h_a, N * sizeof(float), cudaMemcpyHostToDevice));
+
+    cudaEventRecord(start);
+    reduceKernel<<<1, N>>>(d_a, N);
+    cudaEventRecord(end);
+
+    //cudaEventSynchronize(start);
+    cudaEventSynchronize(end);
+
+    float milliseconds;
+    cudaEventElapsedTime(&milliseconds, start, end);
+
+    cudaMemcpy(h_a, d_a, N * sizeof(float), cudaMemcpyDeviceToHost);
+
+    std::cout << "Result is " << h_a[0] << std::endl;
+    std::cout << "Reduce time is " << milliseconds << std::endl;
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(end);
+    cudaFree(d_a);
     return 0;
 }

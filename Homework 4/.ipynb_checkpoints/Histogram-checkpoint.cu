@@ -91,7 +91,7 @@ int main() {
     // Some stuff needed by png-reader
     png_infop info_ptr;
     png_bytepp row_pointers;
-    std::string in_filename = "image.png";
+    std::string in_filename = "image.png", out_filename = "out.png";
     // ----- Read data from png -----
     read_png(in_filename, n_rows, n_cols, info_ptr, row_pointers);
     int* inArray;
@@ -110,7 +110,7 @@ int main() {
     int* histogram = (int*)malloc(sizeof(int) * 256);
     gpuErrchk(cudaMemcpy(histogram, d_histogram, 256 * sizeof(int), cudaMemcpyDeviceToHost));
     cudaDeviceSynchronize();
-    std::string out_filename = "histogram.txt";
-    write_file(out_filename, histogram, 256);
+    std::string out_file = "histogram.txt";
+    write_file(out_file, histogram, 256);
     return 0;
 }
